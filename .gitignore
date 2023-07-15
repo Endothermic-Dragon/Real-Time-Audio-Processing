@@ -1,1 +1,3 @@
+*.lico
+.vscode
 __pycache__
