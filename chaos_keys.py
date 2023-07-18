@@ -16,19 +16,16 @@ class ChaosKeys:
 
     # Decide on gamma and find etas
     self.gamma = 31 - 27*self.key_gen.new_key()/self.key_gen.mod
-    self.eta1 = np.ceil(
-      0.5 - np.sqrt(
+    self.eta1 = 0.5 - np.sqrt(
         0.25 - np.floor(self.gamma/4) / self.gamma
       )
-    )
-    self.eta2 = np.ceil(
-      0.5 + np.sqrt(
+    self.eta2 = 0.5 + np.sqrt(
         0.25 - np.floor(self.gamma/4) / self.gamma
       )
-    )
 
     # Decide on x
     self.x = self.key_gen.new_key()/self.key_gen.mod
+    self.keys = []
 
     # Decide on key list length
     if min_size != max_size:
@@ -59,7 +56,7 @@ class ChaosKeys:
 
     self.keys = bytestream
     return self.keys
-  
+
   # Plot values
   def plot_keys(self):
     plt.plot(self.keys, "o")

@@ -1,5 +1,5 @@
 from chaos_keys import ChaosKeys
 
-keyModule = ChaosKeys(9, 21)
-keyModule.generage_keys()
-keyModule.plot_keys()
+key_module = ChaosKeys(128, 128)
+key_module.generage_keys()
+key_module.plot_keys()
