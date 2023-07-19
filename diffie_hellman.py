@@ -5,15 +5,16 @@ class DiffieHellman:
     # Publically agreed base for Diffie-Hellman
     # Must be prime
     self.mod = 2**16+1
+    self.bases = []
     self.exp1 = []
     self.exp2 = []
     self.common_secrets = []
-    self.bases = []
+    self.common_secret = None
 
   # Check if base is a generator of mod
   def __check_generator(self, base):
     return pow(base, (self.mod-1)//2, self.mod) != 1
-  
+
   # Generate and return a new key
   # Save results within attributes
   def new_key(self):
