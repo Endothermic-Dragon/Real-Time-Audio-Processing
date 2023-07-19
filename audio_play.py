@@ -5,11 +5,13 @@ import sounddevice as sd
 blocksize = 2400
 rate = 48000
 
-wav_rate, data = wavfile.read("uwu.wav")
+wav_rate, data = wavfile.read("output.wav")
+if len(data.shape) == 1:
+  data = np.reshape(data, (data.shape[0], 1))
 channels = data.shape[1]
 
 
-def callback(outdata, _frame_count, _time_info):
+def callback(outdata, _frame_count, _time_info, _status):
   global data
 
   # Pad data to fit output format

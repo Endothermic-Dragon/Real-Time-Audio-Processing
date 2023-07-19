@@ -15,7 +15,7 @@ audio_data = np.array([], dtype=np.float32)
 audio_data = np.reshape(audio_data, (0, channels))
 
 
-def callback(indata, _frame_count, _time_info):
+def callback(indata, _frame_count, _time_info, _status):
   global audio_data
   audio_data = np.append(audio_data, indata, axis=0)
 
