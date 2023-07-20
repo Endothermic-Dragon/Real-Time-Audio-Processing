@@ -6,32 +6,26 @@ from diffie_hellman import DiffieHellman
 # Chaos-based pseudorandom number generation
 # See https://doi.org/10.3390/electronics9010104
 
+
 # Implementation of "Modified Robust Logistic Map"
 class ChaosKeys:
-  def __init__(self, min_size=1024, max_size=2048):
-    if min_size > max_size:
-      raise ValueError("Max size must be greater than or equal to min size.")
-
+  def __init__(self, min_key_length, max_key_length, mod, secret1, secret2, secret3):
     self.key_gen = DiffieHellman()
 
     # Decide on gamma and find etas
-    self.gamma = 31 - 27*self.key_gen.new_key()/self.key_gen.mod
-    self.eta1 = 0.5 - np.sqrt(
-        0.25 - np.floor(self.gamma/4) / self.gamma
-      )
-    self.eta2 = 0.5 + np.sqrt(
-        0.25 - np.floor(self.gamma/4) / self.gamma
-      )
+    self.gamma = 31 - 27 * secret1 / mod
+    self.eta1 = 0.5 - np.sqrt(0.25 - np.floor(self.gamma / 4) / self.gamma)
+    self.eta2 = 0.5 + np.sqrt(0.25 - np.floor(self.gamma / 4) / self.gamma)
 
     # Decide on x
-    self.x = self.key_gen.new_key()/self.key_gen.mod
+    self.x = secret2 / mod
     self.keys = []
 
     # Decide on key list length
-    if min_size != max_size:
-      self.key_length = min_size + self.key_gen.new_key() % (max_size - min_size)
+    if min_key_length != max_key_length:
+      self.key_length = min_key_length + secret3 % (max_key_length - min_key_length)
     else:
-      self.key_length = min_size
+      self.key_length = min_key_length
 
   # Use chaos maps to generate keys
   # Read into research article (at the top) for more info
@@ -40,16 +34,16 @@ class ChaosKeys:
     bitcount = 8
 
     # Slightly modified to output bytes instead of bits
-    while len(bytestream) < self.key_length*8:
+    while len(bytestream) < self.key_length:
       if self.eta1 <= self.x <= self.eta2:
-        self.x = (self.gamma * self.x * (1-self.x) % 1) / (self.gamma/4%1)
+        self.x = (self.gamma * self.x * (1 - self.x) % 1) / (self.gamma / 4 % 1)
       else:
-        self.x = self.gamma * self.x * (1-self.x) % 1
+        self.x = self.gamma * self.x * (1 - self.x) % 1
       if 0.1 <= self.x <= 0.6:
         bit = 1 if self.x * 10**10 % 1 > 0.5 else 0
         if bitcount < 8:
           bitcount += 1
-          bytestream[-1] = bytestream[-1]*2+bit
+          bytestream[-1] = bytestream[-1] * 2 + bit
         else:
           bitcount = 1
           bytestream.append(bit)
@@ -57,7 +51,7 @@ class ChaosKeys:
     self.keys = bytestream
     return self.keys
 
-  # Plot values
+  # Plot key values
   def plot_keys(self):
     plt.plot(self.keys, "o")
     plt.xlabel("Keys Index")

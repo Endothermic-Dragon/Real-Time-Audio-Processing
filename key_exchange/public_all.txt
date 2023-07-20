@@ -1,0 +1,3 @@
+modulus=65537
+min_key_length=16384
+max_key_length=32768

@@ -1,0 +1,2 @@
+private_exponent=57770
+df_encoded_recieved=46053

@@ -1,10 +1,12 @@
 from secrets import randbits
 
+
 class DiffieHellman:
+
   def __init__(self):
     # Publically agreed base for Diffie-Hellman
     # Must be prime
-    self.mod = 2**16+1
+    self.mod = 2**16 + 1
     self.bases = []
     self.exp1 = []
     self.exp2 = []
@@ -13,7 +15,7 @@ class DiffieHellman:
 
   # Check if base is a generator of mod
   def __check_generator(self, base):
-    return pow(base, (self.mod-1)//2, self.mod) != 1
+    return pow(base, (self.mod - 1) // 2, self.mod) != 1
 
   # Generate and return a new key
   # Save results within attributes
@@ -22,7 +24,7 @@ class DiffieHellman:
     # Must be a generator
     while True:
       # Must be odd
-      base = randbits(15)*2+1
+      base = randbits(15) * 2 + 1
       if self.__check_generator(base):
         self.bases.append(base)
         break
@@ -33,6 +35,30 @@ class DiffieHellman:
     self.exp2.append(randbits(16))
 
     # Common secret key
-    self.common_secrets.append(pow(self.bases[-1], self.exp1[-1] * self.exp2[-1], self.mod))
-    self.common_secret = self.common_secrets[-1]
-    return self.common_secret
+    self.common_secrets.append(
+        pow(self.bases[-1], self.exp1[-1] * self.exp2[-1], self.mod)
+    )
+
+  def generate_keys(self, min_key_length=16384, max_key_length=32768):
+    if min_key_length > max_key_length:
+      raise ValueError("Max size must be greater than or equal to min size.")
+
+    with open("./key_exchange/public_all.txt", "w", encoding="utf-8") as f:
+      f.write(f"modulus={self.mod}\n")
+      f.write(f"min_key_length={min_key_length}\n")
+      f.write(f"max_key_length={max_key_length}\n")
+
+    for i in range(3):
+      self.new_key()
+      with open(f"./key_exchange/public_{i+1}.txt", "w", encoding="utf-8") as f:
+        f.write(f"base={self.bases[i]}\n")
+      with open(f"./key_exchange/user_1_{i+1}.txt", "w", encoding="utf-8") as f:
+        f.write(f"private_exponent={self.exp1[i]}\n")
+        exchanged = pow(self.bases[i], self.exp2[i], self.mod)
+        f.write(f"df_encoded_recieved={exchanged}\n")
+      with open(f"./key_exchange/user_2_{i+1}.txt", "w", encoding="utf-8") as f:
+        f.write(f"private_exponent={self.exp2[i]}\n")
+        exchanged = pow(self.bases[i], self.exp1[i], self.mod)
+        f.write(f"df_encoded_recieved={exchanged}\n")
+      with open(f"./key_exchange/shared_secret_{i+1}.txt", "w", encoding="utf-8") as f:
+        f.write(f"secret={self.common_secrets[i]}\n")
