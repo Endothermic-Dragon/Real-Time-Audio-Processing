@@ -1,2 +1,2 @@
-private_exponent=57770
-df_encoded_recieved=46053
+private_exponent=27310
+df_encoded_recieved=42838
