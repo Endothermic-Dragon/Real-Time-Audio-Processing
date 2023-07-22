@@ -1,10 +1,10 @@
 from diffie_hellman import DiffieHellman
 from chaos_keys import ChaosKeys
-from audio_record import run as record_run
-from audio_play import run as play_run
+import asyncio
 
 
 def user_1():
+  from audio_record import run as record_run
   input_dict = {}
   with open("./key_exchange/public_all.txt", "r", encoding="utf-8") as f:
     data = f.readline().strip()
@@ -34,10 +34,12 @@ def user_1():
       input_dict["shared_secret_3"]
   ).generage_keys()
 
-  record_run(chaos_keys)
+  asyncio.run(record_run(chaos_keys))
+  print(1)
 
 
 def user_2():
+  from audio_play import run as play_run
   input_dict = {}
   with open("./key_exchange/public_all.txt", "r", encoding="utf-8") as f:
     data = f.readline().strip()
@@ -67,7 +69,7 @@ def user_2():
       input_dict["shared_secret_3"]
   ).generage_keys()
 
-  play_run(chaos_keys)
+  asyncio.run(play_run(chaos_keys))
 
   chaos_keys = ChaosKeys(
       input_dict["min_key_length"], input_dict["max_key_length"], input_dict["modulus"],
@@ -96,3 +98,7 @@ User 2 (receive) - 2
     user_1()
   case 2:
     user_2()
+  # case 3:
+  #   user_1()
+  #   user_2()
+  #   input()
