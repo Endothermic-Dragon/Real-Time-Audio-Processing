@@ -63,7 +63,7 @@ if not mic_input:
 
 async def run(chaos_keys):
   global xor_keys
-  xor_keys = np.array(chaos_keys)
+  xor_keys = np.array(chaos_keys, dtype=np.uint8)
   input_stream = sd.InputStream(
       callback=callback,
       device=sd.default.device,
@@ -105,7 +105,8 @@ def callback(indata, _frame_count, _time_info, _status):
 
   # Ensure in float32
   audio_dwt = np.array(audio_dwt, dtype=np.float32)
-  audio_enc = byte_xor(np.ndarray.tobytes(audio_dwt), np.ndarray.tobytes(wrap_keys()))
+  wrapped_keys = wrap_keys()
+  audio_enc = byte_xor(np.ndarray.tobytes(audio_dwt), wrapped_keys)
 
   # Generating spectrogram
   if spectrogram:
@@ -114,12 +115,24 @@ def callback(indata, _frame_count, _time_info, _status):
     after = decoded if frames == 0 else np.vstack((after, decoded))
     frames += 1
 
+    print("-----")
+
+    print(np.ndarray.tobytes(before)[:4])
+    print(hex(int.from_bytes(wrapped_keys[:4])))
+    print(hex(int.from_bytes(wrapped_keys[4:4])))
+    print(hex(int.from_bytes(wrapped_keys[8:4])))
+    print(hex(int.from_bytes(wrapped_keys[16:4])))
+    print(np.ndarray.tobytes(after)[:4])
+
+    print(before[:1])
+    print(after[:1])
+
     # Exit when enough data
     if frames == spectrogram_num_frames:
       np.savetxt("spectrogram_before.txt", before, delimiter=", ", fmt="%s")
+      np.savetxt("spectrogram_during.txt", np.frombuffer(wrapped_keys, dtype=np.float32), delimiter=", ", fmt="%s")
       np.savetxt("spectrogram_after.txt", after, delimiter=", ", fmt="%s")
-      print(before[-1])
-      print(after[-1])
+      np.set_printoptions(threshold=sys.maxsize)
       sys.exit()
 
   # Stream or save
@@ -134,11 +147,12 @@ def wrap_keys():
   global curr_key_idx
   keys = xor_keys[curr_key_idx:]
   while keys.size < blocksize * 4:
-    keys = np.append(keys, xor_keys)
+    keys = np.concatenate((keys, xor_keys), 0)
   curr_key_idx += blocksize * 4
   curr_key_idx %= xor_keys.size
-  keys = keys[:blocksize*4]
-  keys = keys[0::4]*2**32 + keys[1::4]*2**16 + keys[2::4]*2**8 + keys[3::4]
+  keys = keys[:blocksize * 4]
+  # keys = keys[0::4] * 2**32 + keys[1::4] * 2**16 + keys[2::4] * 2**8 + keys[3::4]
+  # print(keys)
   return keys
 
 # XOR two bytes strings
