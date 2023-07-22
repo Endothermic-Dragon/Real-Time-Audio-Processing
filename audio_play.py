@@ -6,6 +6,7 @@ import socket
 
 # Control program functions
 stream = True
+save_time_data = True
 
 # Program variables
 rate = 48000
@@ -110,4 +111,5 @@ def capture():
 def forceTimeStats():
   print(np.average(time_stats))
   print(np.std(time_stats))
-  np.savetxt("output.txt", time_stats, delimiter="\n", fmt="%s")
+  if save_time_data:
+    np.savetxt("time_data.txt", time_stats, delimiter="\n", fmt="%s")

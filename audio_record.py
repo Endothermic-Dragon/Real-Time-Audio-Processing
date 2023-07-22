@@ -7,9 +7,11 @@ from scipy.io import wavfile
 import sys
 
 # Control program functions
-stream = True  # type: ignore
-spectrogram = False
+streamed = False  # type: ignore
+mic_input = False
+spectrogram = True
 spectrogram_num_frames = 10 * 2
+wav_file = "0721.wav"
 
 # Program variables
 rate = 48000
@@ -30,7 +32,7 @@ packet_size = 1024
 num_packet = (blocksize * 4 - 1) // packet_size + 1
 
 # If streaming, set up connections
-if stream:
+if streamed:
   user_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   addr = ("127.0.0.1", 8080)
   user_2.connect(addr)
@@ -38,14 +40,14 @@ if stream:
   # Send basic data across
   user_2.sendall(num_packet.to_bytes(2))
   print(num_packet)
-  
+
   # 4 bytes per data point, using float32
   user_2.sendall((blocksize * 4 % packet_size).to_bytes(2))
   print(blocksize % packet_size)
 
 # Read audio file
-else:
-  wav_rate, file_audio_data = wavfile.read("0721.wav")
+if not mic_input:
+  wav_rate, file_audio_data = wavfile.read(wav_file)
 
   if len(file_audio_data.shape) == 2:
     file_audio_data = np.average(file_audio_data, axis=1)
@@ -53,12 +55,11 @@ else:
 
   match file_audio_data.dtype:
     case np.int32:
-      file_audio_data /= 2147483647
+      file_audio_data = np.array(file_audio_data / 2147483647, dtype=np.float32)
     case np.int16:
-      file_audio_data /= 32767
+      file_audio_data = np.array(file_audio_data / 32767, dtype=np.float32)
     case np.uint8:
-      file_audio_data /= 255 * 2
-      file_audio_data -= 1
+      file_audio_data = np.array(file_audio_data / 512 - 1, dtype=np.float32)
 
 async def run(chaos_keys):
   global xor_keys
@@ -76,7 +77,7 @@ async def run(chaos_keys):
   with input_stream:
     print("Input started, press enter to exit.")
     input()
-    if not stream:
+    if not streamed:
       save()
 
 def callback(indata, _frame_count, _time_info, _status):
@@ -85,7 +86,7 @@ def callback(indata, _frame_count, _time_info, _status):
   # Start timestamp
   start = time_ns()
 
-  if stream:
+  if mic_input:
     raw_data = indata
   else:
     # "Pad" WAV file to ensure everything doesn't crash
@@ -117,10 +118,12 @@ def callback(indata, _frame_count, _time_info, _status):
     if frames == spectrogram_num_frames:
       np.savetxt("spectrogram_before.txt", before, delimiter=", ", fmt="%s")
       np.savetxt("spectrogram_after.txt", after, delimiter=", ", fmt="%s")
+      print(before[-1])
+      print(after[-1])
       sys.exit()
 
   # Stream or save
-  if stream:
+  if streamed:
     stream(audio_enc, start)
   else:
     enc_bin = audio_enc.replace(b"\x00", b"\x00\x01") + b"\x00\x00"
@@ -130,11 +133,13 @@ def callback(indata, _frame_count, _time_info, _status):
 def wrap_keys():
   global curr_key_idx
   keys = xor_keys[curr_key_idx:]
-  while keys.size < blocksize:
+  while keys.size < blocksize * 4:
     keys = np.append(keys, xor_keys)
-  curr_key_idx += blocksize
+  curr_key_idx += blocksize * 4
   curr_key_idx %= xor_keys.size
-  return keys[:blocksize]
+  keys = keys[:blocksize*4]
+  keys = keys[0::4]*2**32 + keys[1::4]*2**16 + keys[2::4]*2**8 + keys[3::4]
+  return keys
 
 # XOR two bytes strings
 def byte_xor(ba1, ba2):
