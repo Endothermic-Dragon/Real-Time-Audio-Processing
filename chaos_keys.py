@@ -6,9 +6,9 @@ from diffie_hellman import DiffieHellman
 # Chaos-based pseudorandom number generation
 # See https://doi.org/10.3390/electronics9010104
 
-
 # Implementation of "Modified Robust Logistic Map"
 class ChaosKeys:
+
   def __init__(self, min_key_length, max_key_length, mod, secret1, secret2, secret3):
     self.key_gen = DiffieHellman()
 

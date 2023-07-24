@@ -2,7 +2,6 @@ from diffie_hellman import DiffieHellman
 from chaos_keys import ChaosKeys
 import asyncio
 
-
 def user_1():
   from audio_record import run as record_run
   input_dict = {}
@@ -36,7 +35,6 @@ def user_1():
 
   asyncio.run(record_run(chaos_keys))
   print(1)
-
 
 def user_2():
   from audio_play import run as play_run

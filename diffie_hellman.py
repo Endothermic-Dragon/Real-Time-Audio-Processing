@@ -1,6 +1,5 @@
 from secrets import randbits
 
-
 class DiffieHellman:
 
   def __init__(self):

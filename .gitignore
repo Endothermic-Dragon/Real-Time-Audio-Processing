@@ -1,2 +1,3 @@
 *.lico
 __pycache__
+output/merged-audio.wav

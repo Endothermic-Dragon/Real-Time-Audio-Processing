@@ -1,4 +1,0 @@
-- Regular Bytes: \x01 to \xff
-- Special Byte: \x00
-  - Break stream: \x00
-  - String of zeroes - bytes 0 is continued for

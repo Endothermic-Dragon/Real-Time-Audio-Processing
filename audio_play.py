@@ -16,6 +16,7 @@ frames = 0
 
 xor_keys = np.array([])
 streamed_data = []
+audio_data = np.array([])
 time_stats = []
 
 if stream:
@@ -24,7 +25,7 @@ if stream:
   user_1.bind(addr)
   user_1.listen()
   user_1_conn, addr = user_1.accept()
-  user_1_conn.settimeout(0.5)
+  user_1_conn.settimeout(1)
 
   num_packets = int.from_bytes(user_1_conn.recv(2))
   extra = int.from_bytes(user_1_conn.recv(2))
@@ -34,7 +35,7 @@ async def run(chaos_keys):
   xor_keys = np.array(chaos_keys)
 
   if not stream:
-    with open("output.bin", "rb") as f:
+    with open("./output/output.bin", "rb") as f:
       bin_str = f.read()
 
     for bin_data in bin_str.split(b"\x00\x00"):
@@ -47,7 +48,7 @@ async def run(chaos_keys):
       blocksize=blocksize,
       samplerate=rate,
       latency="low",
-      dtype=np.float32
+      dtype=np.int32
   )
 
   with output_stream:
@@ -67,14 +68,16 @@ def callback(outdata, _frame_count, _time_info, _status):
 
     enc_data = streamed_data.pop(0)
   bin_data = byte_xor(enc_data, np.ndarray.tobytes(wrap_keys()))
-  wavelet_data = np.frombuffer(bin_data, dtype=np.float32, count=-1)
+  wavelet_data = np.frombuffer(bin_data, dtype=np.int32, count=-1)
   wavelet_data = np.reshape(wavelet_data, (blocksize, 1))
   audio_data = pywt.idwt(wavelet_data, None, pywt.Wavelet("db1"))  # type: ignore
-  audio_data = np.average(audio_data, axis=1)
-  audio_data = audio_data.reshape((blocksize, 1)).astype(np.float32)
+  # Convert to int64 to not overflow
+  audio_data = np.average(audio_data.astype(np.int64), axis=1)
+  # Convert back to int32
+  audio_data = audio_data.reshape((blocksize, 1)).astype(np.int32)
 
   # Stream padded data
-  outdata[:] = audio_data
+  outdata[:] = 0#audio_data
 
   if not stream and len(streamed_data) == 0:
     print(np.average(time_stats))
@@ -112,4 +115,4 @@ def forceTimeStats():
   print(np.average(time_stats))
   print(np.std(time_stats))
   if save_time_data:
-    np.savetxt("time_data.txt", time_stats, delimiter="\n", fmt="%s")
+    np.save("./output/time_data.npy", time_stats, allow_pickle=False)

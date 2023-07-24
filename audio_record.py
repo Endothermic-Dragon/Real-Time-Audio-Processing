@@ -7,11 +7,11 @@ from scipy.io import wavfile
 import sys
 
 # Control program functions
-streamed = False  # type: ignore
+streamed = True
 mic_input = False
-spectrogram = True
-spectrogram_num_frames = 10 * 2
-wav_file = "0721.wav"
+spectrogram = False
+num_frames = 60 * 20
+wav_file = "./output/merged-audio.wav"
 
 # Program variables
 rate = 48000
@@ -24,26 +24,13 @@ time_stats = []
 
 xor_keys = np.array([])
 before = np.array([])
+mid = np.array([])
 after = np.array([])
 
 # Streaming variables
 packet_size = 1024
 # 4 bytes per data point, using float32
 num_packet = (blocksize * 4 - 1) // packet_size + 1
-
-# If streaming, set up connections
-if streamed:
-  user_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  addr = ("127.0.0.1", 8080)
-  user_2.connect(addr)
-
-  # Send basic data across
-  user_2.sendall(num_packet.to_bytes(2))
-  print(num_packet)
-
-  # 4 bytes per data point, using float32
-  user_2.sendall((blocksize * 4 % packet_size).to_bytes(2))
-  print(blocksize % packet_size)
 
 # Read audio file
 if not mic_input:
@@ -54,12 +41,24 @@ if not mic_input:
   file_audio_data = np.reshape(file_audio_data, (file_audio_data.shape[0], 1))
 
   match file_audio_data.dtype:
-    case np.int32:
-      file_audio_data = np.array(file_audio_data / 2147483647, dtype=np.float32)
+    case np.float32:
+      file_audio_data = np.array(file_audio_data * 2147483647, dtype=np.int32)
     case np.int16:
-      file_audio_data = np.array(file_audio_data / 32767, dtype=np.float32)
+      file_audio_data = np.array(file_audio_data * 65538, dtype=np.int32)
     case np.uint8:
-      file_audio_data = np.array(file_audio_data / 512 - 1, dtype=np.float32)
+      file_audio_data = np.array(file_audio_data * 16777216 - 2147483648, dtype=np.int32)
+
+# If streaming, set up connections
+if streamed:
+  user_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  addr = ("127.0.0.1", 8080)
+  user_2.connect(addr)
+
+  # Send basic data across
+  user_2.sendall(num_packet.to_bytes(2))
+
+  # 4 bytes per data point, using float32
+  user_2.sendall((blocksize * 4 % packet_size).to_bytes(2))
 
 async def run(chaos_keys):
   global xor_keys
@@ -71,7 +70,7 @@ async def run(chaos_keys):
       blocksize=blocksize,
       samplerate=rate,
       latency="low",
-      dtype=np.float32
+      dtype=np.int32
   )
 
   with input_stream:
@@ -81,7 +80,7 @@ async def run(chaos_keys):
       save()
 
 def callback(indata, _frame_count, _time_info, _status):
-  global file_audio_data, enc_bin, frames, before, after
+  global file_audio_data, enc_bin, frames, before, mid, after
 
   # Start timestamp
   start = time_ns()
@@ -95,6 +94,8 @@ def callback(indata, _frame_count, _time_info, _status):
 
     # If end of audio file, exit
     if file_audio_data.size == 0:
+      print(np.average(time_stats))
+      print(np.std(time_stats))
       exit()
 
     # Remove streamed data from array
@@ -103,44 +104,45 @@ def callback(indata, _frame_count, _time_info, _status):
   # DWT audio
   audio_dwt = pywt.dwt(raw_data, pywt.Wavelet("db1"))[0]  # type: ignore
 
-  # Ensure in float32
-  audio_dwt = np.array(audio_dwt, dtype=np.float32)
+  # Ensure in int32
+  audio_dwt = np.array(audio_dwt, dtype=np.int32)
   wrapped_keys = wrap_keys()
-  audio_enc = byte_xor(np.ndarray.tobytes(audio_dwt), wrapped_keys)
+  a = np.ndarray.tobytes(audio_dwt)
+  audio_enc = byte_xor(a, wrapped_keys)
 
   # Generating spectrogram
   if spectrogram:
+    # Before encryption
     before = audio_dwt.T if frames == 0 else np.vstack((before, audio_dwt.T))
-    decoded = np.frombuffer(audio_enc, dtype=np.float32, count=-1).reshape((1, blocksize))
-    after = decoded if frames == 0 else np.vstack((after, decoded))
-    frames += 1
 
-    print("-----")
+    # After encryption, before decryption
+    int32_arr = np.frombuffer(audio_enc, dtype=np.int32)
+    mid = int32_arr if frames == 0 else np.vstack((mid, int32_arr))
 
-    print(np.ndarray.tobytes(before)[:4])
-    print(hex(int.from_bytes(wrapped_keys[:4])))
-    print(hex(int.from_bytes(wrapped_keys[4:4])))
-    print(hex(int.from_bytes(wrapped_keys[8:4])))
-    print(hex(int.from_bytes(wrapped_keys[16:4])))
-    print(np.ndarray.tobytes(after)[:4])
+    # After decryption
+    int32_arr = byte_xor(audio_enc, wrapped_keys)
+    int32_arr = np.frombuffer(int32_arr, dtype=np.int32)
+    after = int32_arr if frames == 0 else np.vstack((after, int32_arr))
+  # Exit when enough data (timestamps or spectrograms)
+  if frames >= num_frames:
+    # Save spectrograms
+    if spectrogram:
+      np.save("./output/spectrogram_before.npy", before, allow_pickle=False)
+      np.save("./output/spectrogram_mid.npy", mid, allow_pickle=False)
+      np.save("./output/spectrogram_after.npy", after, allow_pickle=False)
+    print(np.average(time_stats))
+    print(np.std(time_stats))
+    np.save("./output/temp.npy", time_stats, allow_pickle=False)
+    sys.exit()
 
-    print(before[:1])
-    print(after[:1])
-
-    # Exit when enough data
-    if frames == spectrogram_num_frames:
-      np.savetxt("spectrogram_before.txt", before, delimiter=", ", fmt="%s")
-      np.savetxt("spectrogram_during.txt", np.frombuffer(wrapped_keys, dtype=np.float32), delimiter=", ", fmt="%s")
-      np.savetxt("spectrogram_after.txt", after, delimiter=", ", fmt="%s")
-      np.set_printoptions(threshold=sys.maxsize)
-      sys.exit()
+  frames += 1
 
   # Stream or save
   if streamed:
     stream(audio_enc, start)
   else:
     enc_bin = audio_enc.replace(b"\x00", b"\x00\x01") + b"\x00\x00"
-    time_stats.append(time_ns() - start)
+  time_stats.append(time_ns() - start)
 
 # Wrapped chaos keys, returns size of one block
 def wrap_keys():
@@ -157,11 +159,13 @@ def wrap_keys():
 
 # XOR two bytes strings
 def byte_xor(ba1, ba2):
-  return bytes(_a ^ _b for _a, _b in zip(ba1, ba2))
+  int1 = int.from_bytes(ba1)
+  int2 = int.from_bytes(ba2)
+  return (int1 ^ int2).to_bytes(blocksize*4)
 
 # Save binary file when not streaming
 def save():
-  with open("./output.bin", "wb") as f:
+  with open("./output/output.bin", "wb") as f:
     f.write(enc_bin)
   print(np.average(time_stats))
   print(np.std(time_stats))

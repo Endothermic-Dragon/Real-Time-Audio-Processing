@@ -8,7 +8,6 @@ from keras.models import Model
 
 blocksize = 2400
 
-
 class Autoencoder(Model):
 
   def __init__(self, latent_dim):
@@ -29,7 +28,6 @@ class Autoencoder(Model):
 
   def call(self, x):
     return self.decoder(self.encoder(x))
-
 
 autoencoder = Autoencoder(2048)
 autoencoder.compile(optimizer='adam', loss=losses.MeanSquaredError())
