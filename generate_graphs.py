@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 mpl.rcParams['figure.dpi'] = 150
 
 # ----- Customize -----
-max_frames = round(20 * 5)
+max_frames = round(20 * 30)
 ticks_per_second = 20
 # Docs: https://matplotlib.org/stable/gallery/images_contours_and_fields/interpolation_methods.html
 # Usually "none" or "antialiased"

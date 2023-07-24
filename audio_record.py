@@ -10,7 +10,7 @@ import sys
 streamed = True
 mic_input = False
 spectrogram = False
-num_frames = 60 * 20
+num_frames = 90 * 20
 wav_file = "./output/merged-audio.wav"
 
 # Program variables
