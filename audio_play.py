@@ -1,12 +1,14 @@
 from time import time_ns, sleep
 import numpy as np
 import sounddevice as sd
+from scipy.io import wavfile
 import pywt
 import socket
+import sys
 
 # Control program functions
 stream = True
-save_time_data = True
+save_time_data = False
 
 # Program variables
 rate = 48000
@@ -18,6 +20,7 @@ xor_keys = np.array([])
 streamed_data = []
 audio_data = np.array([])
 time_stats = []
+wav_data = np.array([])
 
 if stream:
   user_1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,7 +35,7 @@ if stream:
 
 async def run(chaos_keys):
   global xor_keys
-  xor_keys = np.array(chaos_keys)
+  xor_keys = np.array(chaos_keys, dtype=np.uint8)
 
   if not stream:
     with open("./output/output.bin", "rb") as f:
@@ -54,9 +57,11 @@ async def run(chaos_keys):
   with output_stream:
     print("Output started")
     input()
+    wavfile.write("./output/output.wav", 48000, wav_data)
     forceTimeStats()
 
 def callback(outdata, _frame_count, _time_info, _status):
+  global wav_data
   start = time_ns()
 
   if stream:
@@ -67,8 +72,9 @@ def callback(outdata, _frame_count, _time_info, _status):
       return
 
     enc_data = streamed_data.pop(0)
+
   bin_data = byte_xor(enc_data, np.ndarray.tobytes(wrap_keys()))
-  wavelet_data = np.frombuffer(bin_data, dtype=np.int32, count=-1)
+  wavelet_data = np.frombuffer(bin_data, dtype=np.int32)
   wavelet_data = np.reshape(wavelet_data, (blocksize, 1))
   audio_data = pywt.idwt(wavelet_data, None, pywt.Wavelet("db1"))  # type: ignore
   # Convert to int64 to not overflow
@@ -76,27 +82,37 @@ def callback(outdata, _frame_count, _time_info, _status):
   # Convert back to int32
   audio_data = audio_data.reshape((blocksize, 1)).astype(np.int32)
 
-  # Stream padded data
-  outdata[:] = 0#audio_data
+  # Stream
+  # outdata[:] = audiodata
+
+  # Save to file
+  outdata[:] = 0
+  wav_data = audio_data.flatten() if wav_data.size == 0 else np.concatenate(
+      (wav_data, audio_data.flatten()), axis=0
+  )
 
   if not stream and len(streamed_data) == 0:
     print(np.average(time_stats))
     print(np.std(time_stats))
+    wavfile.write("./output/output.wav", 48000, wav_data)
+    sys.exit()
   time_stats.append(time_ns() - start)
 
 # Wrapped chaos keys, returns size of one block
 def wrap_keys():
   global curr_key_idx
-  keys = np.array([])
   keys = xor_keys[curr_key_idx:]
-  while keys.size < blocksize:
-    keys = np.append(keys, xor_keys)
-  curr_key_idx += blocksize
+  while keys.size < blocksize * 4:
+    keys = np.concatenate((keys, xor_keys), 0)
+  curr_key_idx += blocksize * 4
   curr_key_idx %= xor_keys.size
-  return keys[:blocksize]
+  keys = keys[:blocksize * 4]
+  return keys
 
 def byte_xor(ba1, ba2):
-  return bytes(_a ^ _b for _a, _b in zip(ba1, ba2))
+  int1 = int.from_bytes(ba1)
+  int2 = int.from_bytes(ba2)
+  return (int1 ^ int2).to_bytes(blocksize * 4)
 
 def capture():
   try:
@@ -108,7 +124,7 @@ def capture():
     return data, timestamp
   except Exception as e:  #BrokenPipeError or ValueError:
     forceTimeStats()
-    import sys
+    wavfile.write("./output/output.wav", 48000, wav_data)
     sys.exit()
 
 def forceTimeStats():

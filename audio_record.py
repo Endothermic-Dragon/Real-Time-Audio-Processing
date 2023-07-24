@@ -141,7 +141,7 @@ def callback(indata, _frame_count, _time_info, _status):
   if streamed:
     stream(audio_enc, start)
   else:
-    enc_bin = audio_enc.replace(b"\x00", b"\x00\x01") + b"\x00\x00"
+    enc_bin += audio_enc.replace(b"\x00", b"\x00\x01") + b"\x00\x00"
   time_stats.append(time_ns() - start)
 
 # Wrapped chaos keys, returns size of one block
@@ -153,15 +153,13 @@ def wrap_keys():
   curr_key_idx += blocksize * 4
   curr_key_idx %= xor_keys.size
   keys = keys[:blocksize * 4]
-  # keys = keys[0::4] * 2**32 + keys[1::4] * 2**16 + keys[2::4] * 2**8 + keys[3::4]
-  # print(keys)
   return keys
 
 # XOR two bytes strings
 def byte_xor(ba1, ba2):
   int1 = int.from_bytes(ba1)
   int2 = int.from_bytes(ba2)
-  return (int1 ^ int2).to_bytes(blocksize*4)
+  return (int1 ^ int2).to_bytes(blocksize * 4)
 
 # Save binary file when not streaming
 def save():
