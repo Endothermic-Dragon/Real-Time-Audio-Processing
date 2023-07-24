@@ -1,4 +1,4 @@
-from time import time_ns, sleep
+from time import time_ns
 import numpy as np
 import sounddevice as sd
 from scipy.io import wavfile
