@@ -2,7 +2,13 @@ import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
 
-mpl.rcParams['figure.dpi'] = 150
+# mpl.rcParams['figure.dpi'] = 150
+mpl.rcParams.update({
+  "figure.dpi": 150,
+  "font.family": "Helvetica",
+  "font.size": 14,
+  "axes.labelsize": 12
+})
 
 # ----- Customize -----
 max_frames = round(20 * 30)
@@ -44,7 +50,7 @@ axs[1].yaxis.set_tick_params(labelleft=False)
 axs[0].set_yticks([])
 axs[0].set_yticklabels([])
 
-fig.colorbar(pos, ax=axs[0], anchor=(0, 0.5), shrink=0.7)
+fig.colorbar(pos, ax=axs[0], anchor=(0.1, 0.5), shrink=0.7)
 
 data = np.load("./output/spectrogram_mid.npy", allow_pickle=False)
 datapoints = min(data.shape[0], max_frames)
@@ -72,7 +78,7 @@ axs[1].yaxis.set_tick_params(labelleft=False)
 axs[1].set_yticks([])
 axs[1].set_yticklabels([])
 
-fig.colorbar(pos, ax=axs[1], anchor=(0, 0.5), shrink=0.7)
+fig.colorbar(pos, ax=axs[1], anchor=(0.1, 0.5), shrink=0.7)
 
 data = np.load("./output/spectrogram_after.npy", allow_pickle=False)
 datapoints = min(data.shape[0], max_frames)
@@ -100,7 +106,7 @@ axs[2].yaxis.set_tick_params(labelleft=False)
 axs[2].set_yticks([])
 axs[2].set_yticklabels([])
 
-fig.colorbar(pos, ax=axs[2], anchor=(0, 0.5), shrink=0.7)
+fig.colorbar(pos, ax=axs[2], anchor=(0.1, 0.5), shrink=0.7)
 
 plt.tight_layout()
 plt.savefig("./output/spectrogram.png")
@@ -117,9 +123,9 @@ print(np.std(data))
 total_time = data.size // 20 if data.size % 20 == 0 else data.size / 20
 
 plt.scatter(np.linspace(0, total_time, data.size), data)
+plt.title("Signal Latency")
 plt.xlabel("Seconds (20 frames/sec)")
 plt.ylabel("Transmission Time (ms)")
-plt.title("Transmission Latency")
 
 plt.tight_layout()
 plt.savefig("./output/latency.png")
