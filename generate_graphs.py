@@ -11,7 +11,7 @@ mpl.rcParams.update({
 })
 
 # ----- Customize -----
-max_frames = round(20 * 30)
+max_frames = round(20 * 4.5)
 ticks_per_second = 20
 # Docs: https://matplotlib.org/stable/gallery/images_contours_and_fields/interpolation_methods.html
 # Usually "none" or "antialiased"
@@ -29,6 +29,7 @@ data = data[:datapoints]
 shape = data.shape
 data = np.ndarray.tobytes(data)
 data = np.frombuffer(data, dtype=np.int32).reshape(shape).T
+data_original = data
 aspect = size / datapoints
 x_extent = max_frames / ticks_per_second
 y_extent = x_extent / shape[1] * shape[0]
@@ -58,6 +59,7 @@ data = data[:datapoints]
 shape = data.shape
 data = np.ndarray.tobytes(data)
 data = np.frombuffer(data, dtype=np.int32).reshape(shape).T
+data_mid = data
 aspect = size / datapoints
 y_extent = x_extent / shape[1] * shape[0]
 
@@ -86,6 +88,7 @@ data = data[:datapoints]
 shape = data.shape
 data = np.ndarray.tobytes(data)
 data = np.frombuffer(data, dtype=np.int32).reshape(shape).T
+data_after = data
 aspect = size / datapoints
 y_extent = x_extent / shape[1] * shape[0]
 
@@ -112,14 +115,23 @@ plt.tight_layout()
 plt.savefig("./output/spectrogram.png")
 # plt.show()
 
+print("Average:", np.average(data))
+print("STD:", np.std(data))
+
+data_original = np.array(data_original, dtype=np.int64)
+data_mid = np.array(data_mid, dtype=np.int64)
+data_after = np.array(data_after, dtype=np.int64)
+
+# MSE values used in paper
+print("MSE Before:", np.average((data_original - data_mid)**2))
+print("MSE After:", np.average((data_original - data_after)**2))
+
 # New graph
 plt.close()
 
 data = np.load("./output/time_data.npy", allow_pickle=False) / 10**6
 datapoints = min(data.shape[0], max_frames)
 data = data[:datapoints]
-print(np.average(data))
-print(np.std(data))
 total_time = data.size // 20 if data.size % 20 == 0 else data.size / 20
 
 plt.scatter(np.linspace(0, total_time, data.size), data)
