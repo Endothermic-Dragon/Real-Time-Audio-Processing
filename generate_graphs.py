@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 
 # mpl.rcParams['figure.dpi'] = 150
 mpl.rcParams.update({
-  "figure.dpi": 150,
-  "font.family": "Helvetica",
-  "font.size": 14,
-  "axes.labelsize": 12
+    "figure.dpi": 150,
+    "font.family": "Helvetica",
+    "font.size": 14,
+    "axes.labelsize": 12
 })
 
 # ----- Customize -----
