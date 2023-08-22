@@ -7,10 +7,10 @@ from scipy.io import wavfile
 import sys
 
 # Control program functions
-streamed = True
-mic_input = False
-spectrogram = False
-num_frames = 90 * 20
+streamed = False
+mic_input = True
+spectrogram = True
+num_frames = 10 * 20
 wav_file = "./output/merged-audio.wav"
 
 # Program variables

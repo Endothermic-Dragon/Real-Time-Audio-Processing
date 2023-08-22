@@ -4,14 +4,15 @@ import matplotlib.pyplot as plt
 
 # mpl.rcParams['figure.dpi'] = 150
 mpl.rcParams.update({
-    "figure.dpi": 150,
+    # "figure.dpi": 150,
+    "figure.dpi": 75,
     "font.family": "Helvetica",
     "font.size": 14,
     "axes.labelsize": 12
 })
 
 # ----- Customize -----
-max_frames = round(20 * 4.5)
+max_frames = round(20 * 10)
 ticks_per_second = 20
 # Docs: https://matplotlib.org/stable/gallery/images_contours_and_fields/interpolation_methods.html
 # Usually "none" or "antialiased"
@@ -113,7 +114,7 @@ fig.colorbar(pos, ax=axs[2], anchor=(0.1, 0.5), shrink=0.7)
 
 plt.tight_layout()
 plt.savefig("./output/spectrogram.png")
-# plt.show()
+plt.show()
 
 print("Average:", np.average(data))
 print("STD:", np.std(data))
